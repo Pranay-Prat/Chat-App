@@ -9,10 +9,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
+import { useThemeStore } from "./store/useThemeStore";
 
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
+  const {theme} = useThemeStore()
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -26,7 +28,7 @@ const App = () => {
       </div>
     );
   return (
-    <div>
+    <div data-theme={theme}>
       <Navbar />
       <Routes>
         <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
