@@ -1,10 +1,12 @@
 import React from 'react'
 import { useAuthStore } from '../store/useAuthStore';
 import { Camera, Mail, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import avatar from '../assets/avatar.png';
 
 const ProfilePage = () => {
   const {updateProfile, isUpdatingProfile, authUser} = useAuthStore();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = React.useState(null);
   const handleImageUpload = async(e)=>{
     const file = e.target.files[0];
@@ -17,13 +19,23 @@ const ProfilePage = () => {
       await updateProfile({profilePic: base64Image});
     };
   }
+  const handleDone = () => {
+    if (window.history.length > 2) navigate(-1);
+    else navigate('/');
+  };
+
   return (
-    <div className='h-screen pt-20'>
+    <div className='min-h-screen container mx-auto px-4 pt-24 pb-10'>
+      {/* Page header */}
+      <div className='flex items-center justify-between max-w-2xl mx-auto mb-4'>
+        <h1 className='text-xl font-semibold'>Profile</h1>
+        <button onClick={handleDone} className='btn btn-sm btn-primary'>Done</button>
+      </div>
+
       <div className='max-w-2xl mx-auto p-4 py-8'>
         <div className='bg-base-300 rounded-xl p-6 space-y-8'>
           <div className='text-center'>
-            <h1 className='text-2xl font-semibold'>Profile</h1>
-            <p className='mt-2'>Your profile information</p>
+            <p className='mt-1 text-base-content/70'>Your profile information</p>
           </div>
           <div className="flex flex-col items-center gap-4">
             <div className="relative">

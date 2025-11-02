@@ -9,6 +9,10 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUserLoading: false,
     isMessagesLoading: false,
+    // presence & typing
+    isTyping: false,
+    // receipts map: { [messageId]: 'sent' | 'delivered' | 'read' }
+    messageStatusById: {},
     getUsers: async () => {
         set({isUserLoading: true})
         try {
@@ -26,7 +30,11 @@ export const useChatStore = create((set, get) => ({
         set({isMessagesLoading: true})
         try {
             const response = await axiosInstance.get(`/messages/${userId}`)
-            set({messages: response.data.messages})
+            // messages fetched from server are delivered to this client
+            const msgs = response.data.messages || [];
+            const nextStatus = { ...get().messageStatusById };
+            msgs.forEach(m => { if (m._id && !nextStatus[m._id]) nextStatus[m._id] = 'delivered'; });
+            set({messages: msgs, messageStatusById: nextStatus})
             console.log("Messages:", response.data.messages)
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Something went wrong')
@@ -38,25 +46,73 @@ export const useChatStore = create((set, get) => ({
         const {selectedUser, messages} = get()
         try {
             const response = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData)
-            set({messages: [...messages, response.data]})
+            const newMsg = response.data;
+            // mark as 'sent' locally
+            const status = { ...get().messageStatusById };
+            if (newMsg?._id) status[newMsg._id] = 'sent';
+            set({messages: [...messages, newMsg], messageStatusById: status})
         } catch (error) {
             toast.error(error?.response?.data?.message || 'Something went wrong')
         }
     },
+    // Socket subscriptions
     subscribeToMessages: () => {
         const {selectedUser} = get()
-        if(!selectedUser) return;
         const socket = useAuthStore.getState().socket;
+        if(!selectedUser || !socket) return;
+
         socket.on("newMessage", (newMessage) => {
-            if(newMessage.senderId !== selectedUser._id) return;
-            set({
-                messages: [...get().messages, newMessage]
-            })
-        })
-    }, 
+            // Accept only for current conversation
+            if(newMessage.senderId !== selectedUser._id && newMessage.recieverId !== selectedUser._id) return;
+            set({ messages: [...get().messages, newMessage] })
+        });
+
+        // Optional receipts support (no-op if server doesn't emit)
+        socket.on("message:delivered", ({ ids = [] }) => {
+            const status = { ...get().messageStatusById };
+            ids.forEach(id => { status[id] = 'delivered'; });
+            set({ messageStatusById: status });
+        });
+        socket.on("message:read", ({ ids = [] }) => {
+            const status = { ...get().messageStatusById };
+            ids.forEach(id => { status[id] = 'read'; });
+            set({ messageStatusById: status });
+        });
+
+        // Typing indicator (no-op if server doesn't emit)
+        socket.on("typing", ({ from, isTyping }) => {
+            if (!selectedUser || from !== selectedUser._id) return;
+            set({ isTyping: !!isTyping });
+        });
+    },
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
+        if(!socket) return;
         socket.off("newMessage");
+        socket.off("message:delivered");
+        socket.off("message:read");
+        socket.off("typing");
+    },
+
+    // Client emitters (server may or may not handle yet)
+    sendTyping: (isTyping) => {
+        const socket = useAuthStore.getState().socket;
+        const { selectedUser } = get();
+        if (!socket || !selectedUser) return;
+        socket.emit("typing", { to: selectedUser._id, isTyping: !!isTyping });
+        set({ isTyping: !!isTyping });
+    },
+    markConversationRead: () => {
+        const socket = useAuthStore.getState().socket;
+        const { messages, selectedUser } = get();
+        if (!socket || !selectedUser) return;
+        const unreadIds = messages.filter(m => m.senderId === selectedUser._id).map(m => m._id).filter(Boolean);
+        if (unreadIds.length) {
+            socket.emit("message:read", { ids: unreadIds, with: selectedUser._id });
+        }
+        const status = { ...get().messageStatusById };
+        unreadIds.forEach(id => { status[id] = 'read'; });
+        set({ messageStatusById: status });
     },
     setSelectedUser: (selectedUser) => set({selectedUser}),
 }))

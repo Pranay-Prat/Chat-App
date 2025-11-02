@@ -1,43 +1,49 @@
 import React from 'react'
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { Link } from 'react-router-dom'
 import AuthImagePattern from '../components/AuthImagePattern';
 import { Eye, EyeOff, Loader2, Lock, Mail, MessageCircleCode } from 'lucide-react';
+
 const LoginPage = () => {
   const [showPassword, setShowPassword] = React.useState(false);
   const [formData, setFormData] = React.useState({
     email: '',
     password: ''
   });
-  const {login , isLoggingIn} = useAuthStore()
+  const { login, isLoggingIn } = useAuthStore();
+
   const validateForm = () => {
-    if(!formData.email.trim()){
-      return toast.error('Email is required')
+    if (!formData.email.trim()) {
+      return toast.error('Email is required');
     }
-    if(!/\S+@\S+\.\S+/.test(formData.email)){
-      return toast.error('Email is invalid')
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      return toast.error('Email is invalid');
     }
-    if(!formData.password.trim()){
-      return toast.error('Password is required')
+    if (!formData.password.trim()) {
+      return toast.error('Password is required');
     }
-    return true
-  }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = validateForm()
-    if(success){
-      login(formData)
+    const success = validateForm();
+    if (success) {
+      login(formData);
     }
-  }
+  };
+
   return (
-    <div className="h-screen grid lg:grid-cols-2">
+    <div className="h-screen grid lg:grid-cols-[65%_35%]">
+      {/* Left: form */}
       <div className="flex flex-col justify-center items-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-8">
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 group">
               <div
-                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20
-              transition-colors"
+                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors"
               >
                 <MessageCircleCode className="w-6 h-6 text-primary" />
               </div>
@@ -46,6 +52,7 @@ const LoginPage = () => {
             </div>
           </div>
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="form-control">
               <label className="label">
@@ -74,7 +81,7 @@ const LoginPage = () => {
                   <Lock className="h-5 w-5 text-base-content/40" />
                 </div>
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   className={`input input-bordered w-full pl-10`}
                   placeholder="••••••••"
                   value={formData.password}
@@ -101,14 +108,15 @@ const LoginPage = () => {
                   Loading...
                 </>
               ) : (
-                "Sign in"
+                'Sign in'
               )}
             </button>
           </form>
 
+          {/* Footer */}
           <div className="text-center">
             <p className="text-base-content/60">
-              Don&apos;t have an account?{" "}
+              Don&apos;t have an account?{' '}
               <Link to="/signup" className="link link-primary">
                 Create account
               </Link>
@@ -116,12 +124,14 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Right: pattern */}
       <AuthImagePattern
         title={"Welcome back!"}
         subtitle={"Sign in to continue your conversations and catch up with your messages."}
       />
     </div>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;
