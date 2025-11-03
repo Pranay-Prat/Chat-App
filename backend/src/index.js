@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.route.js';
@@ -30,12 +31,18 @@ app.use(cors({
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 if(process.env.NODE_ENV==='production'){
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-  // Express 5 / path-to-regexp v6: use /(.*) for catch-all instead of *
-  app.get("/(.*)",(req,res)=>{
-    res.sendFile(path.join(__dirname, '../frontend','dist','index.html'))
-  })
-};
+  const distDir = path.join(__dirname, '../frontend/dist');
+  const indexFile = path.join(distDir, 'index.html');
+  if (fs.existsSync(indexFile)) {
+    app.use(express.static(distDir));
+    // Express 5 / path-to-regexp v6: use /(.*) for catch-all instead of *
+    app.get('/(.*)', (req, res) => {
+      res.sendFile(indexFile);
+    });
+  } else {
+    console.log('Frontend dist not found; running in API-only mode.');
+  }
+}
 
 server.listen(PORT, () => {
   console.log(`Listening on port ${PORT}`);
